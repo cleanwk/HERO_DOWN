@@ -3,7 +3,8 @@
 
 #include "crc.h"
 #include "usart.h"
-
+#include "bsp_uart.h"
+#include "bsp_can.h"
 #include "stdint.h"
 #include "string.h"
 /*-------------------------2019--------------------------------*/
@@ -23,9 +24,11 @@ ext_buff_musk_t						BuffMusk;					//0x0204
 aerial_robot_energy_t				AerialRobotEnergy;			//0x0205
 ext_robot_hurt_t					RobotHurt;					//0x0206
 ext_shoot_data_t					ShootData;					//0x0207
+ext_game_robot_state_t              RobotState;
 
 xFrameHeader              FrameHeader;		//发送帧头信息
 ext_SendClientData_t      ShowData;			//客户端信息
+ext_SendClientData_t      Graphic;			//客户端图形
 ext_CommunatianData_t     CommuData;		//队友通信信息
 /****************************************************/
 
@@ -132,10 +135,10 @@ bool Judge_Read_Data(uint8_t *ReadFromUsart)
 //						{	Hurt_Data_Update = TRUE;	}//装甲数据每更新一次则判定为受到一次伤害
 //					break;
 //					
-//					case ID_shoot_data:      			//0x0207
-//						memcpy(&ShootData, (ReadFromUsart + DATA), LEN_shoot_data);
-//						JUDGE_ShootNumCount();//发弹量统
-//					break;
+					case ID_shoot_data:      			//0x0207
+						memcpy(&ShootData, (ReadFromUsart + DATA), LEN_shoot_data);
+						JUDGE_ShootNumCount();//发弹量统
+					break;
 				}
 				//首地址加帧长度,指向CRC16下一字节,用来判断是否为0xA5,用来判断一个数据包是否有多帧数据
 				if(*(ReadFromUsart + sizeof(xFrameHeader) + LEN_CMDID + FrameHeader.DataLength + LEN_TAIL) == 0xA5)
@@ -161,8 +164,87 @@ bool Judge_Read_Data(uint8_t *ReadFromUsart)
 	{
 		Judge_Data_TF = FALSE;//辅助函数用
 	}
-	
+	CAN2_send_judgement();
 	return retval_tf;//对数据正误做处理
+}
+
+/**
+  * @brief  发送数据给队友
+  * @param  void
+  * @retval void
+  * @attention  步兵向哨兵发送
+  */
+#define Teammate_max_len     200
+unsigned char TeammateTxBuffer[Teammate_max_len];
+bool Send_Color = 0;
+bool First_Time_Send_Commu = FALSE;
+uint16_t send_time = 0;
+void Send_to_Teammate(void)
+{
+	static u8 datalength,i;
+	
+	extern void usart3_dma_init(void);//使能USART3的DMA
+	
+	Send_Color = is_red_or_blue();//判断发送给哨兵的颜色,17哨兵(蓝),7哨兵(红)；
+	
+	memset(TeammateTxBuffer,0,200);
+	
+	CommuData.txFrameHeader.SOF = 0xA5;
+	CommuData.txFrameHeader.DataLength = sizeof(ext_student_interactive_header_data_t) + sizeof(robot_interactive_data_t);
+	CommuData.txFrameHeader.Seq = 0;
+	memcpy(TeammateTxBuffer, &CommuData.txFrameHeader, sizeof(xFrameHeader));
+	Append_CRC8_Check_Sum(TeammateTxBuffer, sizeof(xFrameHeader));	
+	
+	CommuData.CmdID = 0x0301;
+	
+	   
+	CommuData.dataFrameHeader.send_ID = Judge_Self_ID;//发送者的ID
+	
+	
+//	if( Senty_Run() == TRUE)
+//	{
+//		Senty_Run_Clean_Flag();
+//		First_Time_Send_Commu = TRUE;
+//	}
+	
+	if( First_Time_Send_Commu == TRUE )
+	{
+		CommuData.dataFrameHeader.data_cmd_id = 0x0292;//在0x0200-0x02ff之间选择
+		send_time++;
+		if(send_time >= 20)
+		{
+			First_Time_Send_Commu = FALSE;
+		}
+		if(Send_Color == BLUE)//自己是蓝，发给蓝哨兵
+		{
+			CommuData.dataFrameHeader.receiver_ID = 17;//接收者ID
+		}
+		else if(Send_Color == RED)//自己是红，发给红哨兵
+		{
+			CommuData.dataFrameHeader.receiver_ID = 7;//接收者ID
+		}
+	}
+	else
+	{
+		CommuData.dataFrameHeader.data_cmd_id = 0x0255;
+		send_time = 0;
+		CommuData.dataFrameHeader.receiver_ID = 88;//随便给个ID，不发送
+	}
+	
+	CommuData.interactData.data[0] = 0;//发送的内容 //大小不要超过变量的变量类型   
+	
+	memcpy(TeammateTxBuffer+5,(uint8_t *)&CommuData.CmdID,(sizeof(CommuData.CmdID)+sizeof(CommuData.dataFrameHeader)+sizeof(CommuData.interactData)));		
+	Append_CRC16_Check_Sum(TeammateTxBuffer,sizeof(CommuData));
+	
+	datalength = sizeof(CommuData); 
+	if( First_Time_Send_Commu == TRUE )
+	{
+		for(i = 0;i < datalength;i++)
+		{
+//			USART_SendData(UART5,(uint16_t)TeammateTxBuffer[i]);			//有待用DMA的发送函数HAL_UART_Transmit_DMA替换
+//			while(USART_GetFlagStatus(UART5,USART_FLAG_TC)==RESET);		//有待用DMA的flag标志获取函数__HAL_UART_GET_FLAG替换
+		}	 
+	}
 }
 
 /**
@@ -200,6 +282,30 @@ void JUDGE_Show_Data(void)
 
 }
 
+/**
+  * @brief  上传自定义图形
+  * @param  void
+  * @retval void
+  * @attention  按自定义UI操作文档规划图形后,由机器人将数据打包传给对应客户端（机器人和程序的ID由程序自行判断）
+  */
+unsigned char ClientGraphicTxBuffer[send_max_len];
+
+void JUDGE_Show_Graphic(void)
+{
+	determine_ID();//判断发送者ID和其对应的客户端ID 
+	Graphic.txFrameHeader.SOF = 0xA5;
+	Graphic.txFrameHeader.DataLength = sizeof(ext_student_interactive_header_data_t) + sizeof(client_UIcustom_reference_line);
+	Graphic.txFrameHeader.Seq = 0;											//?????????????????????是0还是1？？？
+	memcpy(ClientGraphicTxBuffer, &Graphic.txFrameHeader, sizeof(xFrameHeader));//写入帧头数据
+	Append_CRC8_Check_Sum(ClientGraphicTxBuffer, sizeof(xFrameHeader));//写入帧头CRC8校验码
+
+	Graphic.CmdID = 0x0005;//命令码ID，从裁判系统用户接口说明中得知
+
+	Graphic.dataFrameHeader.data_cmd_id = 0x100;//客户端的内容ID,官方固定
+	Graphic.dataFrameHeader.send_ID 	 = Judge_Self_ID;//机器人的ID
+	Graphic.dataFrameHeader.receiver_ID = Judge_SelfClient_ID;//客户端的ID
+	ShowData.txFrameHeader.Seq = 0;//	???????????????????????????????????????????????????????这句代码是不是多余的？去掉试试？
+}
 
 /**
   * @brief  判断自己红蓝方
@@ -272,6 +378,18 @@ float JUDGE_fGetChassisPower(void)
 uint16_t JUDGE_fGetRemainEnergy(void)
 {
 	return (PowerHeatData.chassis_power_buffer);
+}
+
+float Shoot_Speed_Now = 0;
+float Shoot_Speed_Last = 0;
+void JUDGE_ShootNumCount(void)
+{
+	Shoot_Speed_Now = ShootData.bullet_speed;
+	if(Shoot_Speed_Last != Shoot_Speed_Now)//因为是float型，几乎不可能完全相等,所以速度不等时说明发射了一颗弹
+	{
+		ShootNum++;
+		Shoot_Speed_Last = Shoot_Speed_Now;
+	}
 }
 
 #endif

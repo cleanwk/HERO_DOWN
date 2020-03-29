@@ -1,5 +1,4 @@
 #include "bsp_uart.h"
-#include "control.h"
 #include "chassic.h"
 #include "tim.h"
 #include "math.h"
@@ -9,9 +8,8 @@
 #include "judgement.h"
 #include <math.h>
 #include "judgement.h"
-#include "kalman.h"
-
-#define ABS(x)		((x>0)? (x): (-x)) 
+#include "Calculate.h"
+#include "gimbal.h"
 
 //不同模式下的最高速度
 #define    LIMIT_CHASSIS_MAX         4000     //功率限制情况下底盘单个电机最大输出
@@ -22,10 +20,10 @@
 #define    TIME_INC_NORMAL           2//10//6	  //键盘斜坡,越大增加速度越快,完成时间越短
 #define    TIME_INC_SALTATION        1        //突然变速情况下速度变化快慢
 #define    TIME_DEC_NORMAL           3//180        //键盘斜坡,越大减小速度越快(一般要比INC大一点,这样松开键盘能更快为0,太大则会造成底盘停下来的时候跳跃)
-
+#define    TIME_INC_SZUPUP           3		  //手动爬坡模式下速度变化快慢
 #define    REVOLVE_SLOPE_NORMAL      80       //底盘普通模式斜坡,越大越快,完成时间越短
 #define    REVOLVE_SLOPE_CORGI       150      //底盘扭屁股模式斜坡,越大越快,完成时间越短
-
+#define    REVOLVE_MAX_SZUPUP        9000     //手动爬坡模式下扭头速度
 
 //底盘电流限幅
 #define iTermChassis_Max             3000     //微分限幅
@@ -97,7 +95,7 @@ float Chassis_Speed_Error_NOW[4], Chassis_Speed_Error_LAST[4];
 //陀螺仪模式下底盘偏差(相对YAW的中心分离机械角度)
 int16_t Chassis_Gyro_Error;
 //测量角度
-float Cloud_Angle_Measure[2][2];//  pitch/yaw    mech/gyro
+//float Cloud_Angle_Measure[2][2];//  pitch/yaw    mech/gyro
 
 
 //单级PID参数
@@ -109,14 +107,14 @@ float	pidTermChassis[4];//ID,计算输出量
 //底盘电机输出量
 float Chassis_Final_Output[4];
 
-
+int16_t yaw_angle_offset;
 
 //底盘扭头
 float Chassis_Z_kpid[3] = {-11, 0, 5};
 float pTermChassisZ;
 float dTermChassisZ;
 //PID 测试
-//float yys[4];
+
 
  /*****************底盘各类模式的辅助定义***********/
 
@@ -133,28 +131,8 @@ float WARNING_REMAIN_POWER = 60;
 
 float fChasCurrentLimit = CHAS_CURRENT_LIMIT;//限制4个轮子的速度总和
 float fTotalCurrentLimit;//电流分配,平地模式下分配是均匀的
-float constrain_float(float amt, float low, float high)
-{
-	if (amt < low)
-			return low;
-	else if (amt > high)
-			return high;
-	else
-			return amt;
-}
-
-//限幅
-int constrain(int amt, int low, int high)
-{
-	if (amt < low)
-			return low;
-	else if (amt > high)
-			return high;
-	else
-			return amt;
-}
-
-
+//每2ms执行一次任务函数，绝对延时
+uint8_t remot_change = 1;
 void Task_Chassis(void)//每？ms执行一次任务
 {
  //for(;;)
@@ -189,8 +167,8 @@ void Task_Chassis(void)//每？ms执行一次任务
 		Chassis_Speed_Measure[3]=M3508[3].rotor_speed;
 		
 		Chassis_MotorOutput();//底盘PID计算
-	//	Chassis_Power_Limit();//功率限制,电流重新分配
-        Chassis_set_voltage(Chassis_Final_Output[0],Chassis_Final_Output[1],Chassis_Final_Output[2],Chassis_Final_Output[3]);
+  	Chassis_Power_Limit();//功率限制,电流重新分配
+    Chassis_set_voltage(Chassis_Final_Output[0],Chassis_Final_Output[1],Chassis_Final_Output[2],Chassis_Final_Output[3]);
 		
 
 		 
@@ -220,10 +198,8 @@ void CHASSIS_InitArgument(void)
 	Chassis_Speed_kpid[RIGH_BACK_204][KD] = 0;
 	
 }
-//int CHASSIS_CORGI_Mode_Ctrl_Time(REVOLVE_MAX_CORGI, REVOLVE_SLOPE_CORGI)
-//{
 
-//}
+
 /**
   * @brief  底盘失控停止
   * @param  void
@@ -233,6 +209,8 @@ void CHASSIS_InitArgument(void)
 void CHASSIS_StopMotor(void)
 {
 }
+
+
 /**
   * @brief  底盘启动状态
   * @param  void
@@ -244,17 +222,18 @@ void CHASSIS_REST(void)
 	Slope_Chassis_Move_Z = 0;//扭屁股实时输出斜坡
 	Chassis_Move_X = 0;
 	Chassis_Move_Y = 0;
-	Chassis_Move_Z = 0;
-	
+	Chassis_Move_Z = 0;	
 }
-// * @brief  遥控控制底盘移动
-//  * @param  void
-//  * @retval void
-//  * @attention 在此计算移动方向
-//  */
+
+
+/** @brief  遥控控制底盘移动
+  * @param  void
+  * @retval void
+  * @attention 在此计算移动方向
+  */
 void CHAS_Rc_Ctrl(void)
 {
-    float k_rc_z = 1;//根据Z速度调节前后左右平移移速比
+  float k_rc_z = 1;//根据Z速度调节前后左右平移移速比
 	
 	if (IF_RC_SW2_DOWN)//S2下陀螺仪
 	{
@@ -266,7 +245,7 @@ void CHAS_Rc_Ctrl(void)
 	}
 	
 	//扭头斜坡切换成普通模式(扭屁股模式斜坡复位)
-	//Slope_Chassis_Revolve_Move = REVOLVE_SLOPE_NORMAL;
+	Slope_Chassis_Revolve_Move = REVOLVE_SLOPE_NORMAL;
 	//移动速度限制
 	Chassis_Standard_Move_Max = STANDARD_MAX_NORMAL;//平移限幅
 	Chassis_Revolve_Move_Max  = REVOLVE_MAX_NORMAL;//扭头限幅
@@ -276,7 +255,7 @@ void CHAS_Rc_Ctrl(void)
 	{	
 		Chassis_Move_Z = constrain_float(10*RC_CH0_RLR_OFFSET, -Chassis_Revolve_Move_Max, Chassis_Revolve_Move_Max);//旋转
 		
-		if(fabs(Chassis_Move_Z) > 800)//扭头速度越快,前后速度越慢,防止转弯半径过大
+		if(fabs(Chassis_Move_Z) > 20)//扭头速度越快,前后速度越慢,防止转弯半径过大
 		{
 			k_rc_z = ( (Chassis_Revolve_Move_Max - fabs(Chassis_Move_Z) + 800) * (Chassis_Revolve_Move_Max - fabs(Chassis_Move_Z) + 800) )
 						/ ( Chassis_Revolve_Move_Max * Chassis_Revolve_Move_Max );
@@ -295,11 +274,11 @@ void CHAS_Rc_Ctrl(void)
 	}
 	else if(modeChassis == GYRO)//陀螺仪模式
 	{
-		Chassis_Gyro_Error = GIMBAL_GetOffsetAngle( );//底盘相对YAW的偏差
+		Chassis_Gyro_Error = yaw_angle_offset;//底盘相对YAW的偏差
 
 		Chassis_Move_Z = Chassis_SpeedZ_PID(Chassis_Gyro_Error, kRc_Gyro_Chassis_Revolve);
 	
-		if(fabs(Chassis_Move_Z) > 800)//扭头速度越快,前后速度越慢,防止转弯半径过大
+		if(fabs(Chassis_Move_Z) > 20)//扭头速度越快,前后速度越慢,防止转弯半径过大
 		{
 			k_rc_z = ( (Chassis_Revolve_Move_Max - fabs(Chassis_Move_Z) + 800) * (Chassis_Revolve_Move_Max - fabs(Chassis_Move_Z) + 800) )
 						/ ( Chassis_Revolve_Move_Max * Chassis_Revolve_Move_Max );
@@ -316,6 +295,8 @@ void CHAS_Rc_Ctrl(void)
 
 	}
 }
+
+
 /**
   * @brief  键盘控制底盘移动
   * @param  void
@@ -325,14 +306,18 @@ void CHAS_Rc_Ctrl(void)
   */
 void CHAS_Key_Ctrl(void)
 {
-//	//正常应该加入机械模式，陀螺仪模式判断
+	if(remot_change == 1)//刚从遥控模式切过来,默认为陀螺仪模式
+		{
+			modeChassis = GYRO;
+			remot_change = 0;
+		}
 	switch (actChassis) 
 	{
 		/*------------------普通模式,进行模式切换判断-------------------*/	
 		case CHASSIS_NORMAL:		
-			Chassis_NORMAL_Mode_Ctrl();	
+			   Chassis_NORMAL_Mode_Ctrl();	
 		break;
-	//  Chassis_NORMAL_Mode_Ctrl();
+
 		
 		/*------------------扭屁股模式--------------*/
 		case CHASSIS_CORGI:	
@@ -359,6 +344,10 @@ void CHAS_Key_Ctrl(void)
 			{
 				actChassis = CHASSIS_NORMAL;//退出扭屁股模式
 			}
+		/*-------------手动爬坡模式-------------*/
+		case CHASSIS_SZUPUP:
+			  CHASSIS_SZUPUP_Mode_Ctrl();
+		break;
 		}
 }
 /*************************底盘键盘模式各类模式小函数****************************/
@@ -499,6 +488,7 @@ void Chassis_Keyboard_Move_Calculate( int16_t sMoveMax, int16_t sMoveRamp )
 }
 
 
+
 /**
   * @brief  鼠标控制底盘旋转,键盘QEC控制快速转圈
   * @param  速度最大输出量 
@@ -521,6 +511,29 @@ void Chassis_NORMAL_Mode_Ctrl(void)
             Chassis_Keyboard_Move_Calculate(STANDARD_MAX_NORMAL, TIME_INC_NORMAL);//设置速度最大值与斜坡时间	
 	          Chassis_Mouse_Move_Calculate(REVOLVE_MAX_NORMAL);	//鼠标通过改变chassic_move_z来控制左右旋转
 }
+
+
+/**
+  * @brief  手动爬坡模式
+  * @param  void
+  * @retval void
+  * @attention  
+  */
+void CHASSIS_SZUPUP_Mode_Ctrl(void)
+{
+	if( !IF_KEY_PRESSED_W || !IF_KEY_PRESSED_CTRL)//松开任意一个退出爬坡模式
+	{
+		actChassis = CHASSIS_NORMAL;//底盘退出爬坡模式
+	}
+	else
+	{
+		modeChassis = GYRO;//陀螺仪模式
+		
+		Chassis_Keyboard_Move_Calculate( STANDARD_MAX_SZUPUP, TIME_INC_SZUPUP );
+		Chassis_Mouse_Move_Calculate( REVOLVE_MAX_SZUPUP );
+	}
+}
+
 
 /**
   * @brief  扭屁股模式(位置不变版)
@@ -547,7 +560,7 @@ void CHASSIS_CORGI_Mode_Ctrl(int16_t sRevolMax, int16_t sRevolRamp)
 	Chassis_Revolve_Move_Max = sRevolMax;//最大速度设置
 	Slope_Chassis_Revolve_Move = sRevolRamp;//扭头斜坡设置
 
-	//sAngleError = GIMBAL_GetOffsetAngle();//计算yaw中心偏离,保证底盘扭屁股的时候也能跟随云台动
+	sAngleError = GIMBAL_GetOffsetAngle();//计算yaw中心偏离,保证底盘扭屁股的时候也能跟随云台动
 
 	//计算角度偏差,机械角度转换成欧拉角,用于前进速度补偿
 	angle = -(float)sAngleError / (float)8192 * 6.283f;
@@ -645,10 +658,6 @@ void CHASSIS_CORGI_Mode_Ctrl(int16_t sRevolMax, int16_t sRevolRamp)
   * @attention  (201/202/203/204 --> 左前/右前/左后/右后)
   *              	X前(+)后(-)     Y左(-)右(+)     Z扭头
   */
-
-
-
-
 void Chassis_Omni_Move_Calculate(void)//移动计算
 {
 	static float rotate_ratio_fl;//前左
@@ -780,72 +789,71 @@ float Chassis_Z_Speed_PID(void)
 
 
 
-///*****************底盘功率*************************/
+/*****************底盘功率*************************/
 
-///**
-//  * @brief  底盘功率限制
-//  * @param  void
-//  * @retval void
-//  * @attention  在底盘输出计算后调用,主要是比例的算法,ICRA
-//  */
-//void Chassis_Power_Limit(void)
-//{
-//	float    kLimit = 1;//功率限制系数
-//	float    chassis_totaloutput = 0;//统计总输出电流
-//	float    Joule_Residue = 0;//剩余焦耳缓冲能量
-//	int16_t  judgDataCorrect = 0;//裁判系统数据是否可用	
-//	static int32_t judgDataError_Time = 0;
-//	judgDataCorrect = JUDGE_sGetDataState();//裁判系统数据是否可用
-//	Joule_Residue = JUDGE_fGetRemainEnergy();//剩余焦耳能量	
-//	
-//	//统计底盘总输出
-//	chassis_totaloutput = ABS(Chassis_Final_Output[0]) + ABS(Chassis_Final_Output[1])
-//							+ ABS(Chassis_Final_Output[2]) + ABS(Chassis_Final_Output[3]);
-//	
-//		if(judgDataCorrect == JUDGE_DATA_ERROR)//裁判系统无效时强制限速
-//	{
-//		judgDataError_Time++;
-//		if(judgDataError_Time > 100)
-//		{
-//			fTotalCurrentLimit = 8000;//降为最大的1/4
-//		}
-//	}
-//	
-//	else
-//	{
-////		judgDataError_Time = 0;
-////		//剩余焦耳量过小,开始限制输出,限制系数为平方关系
-////		if(Joule_Residue < WARNING_REMAIN_POWER)
-////		{
-////			kLimit = (float)(Joule_Residue / WARNING_REMAIN_POWER)
-////						* (float)(Joule_Residue / WARNING_REMAIN_POWER);
-////			
-////			fTotalCurrentLimit = kLimit * fChasCurrentLimit;
-////		}
-////		else   //焦耳能量恢复到一定数值
-////		{
-////			fTotalCurrentLimit = fChasCurrentLimit;
-////		}
-//        if(PowerHeatData.chassis_power>70)
-//        {
-//            kLimit=((PowerHeatData.chassis_power-70)/70)*((PowerHeatData.chassis_power-70)/70);
-//            fTotalCurrentLimit = kLimit * fChasCurrentLimit;
-//        }
-//        else   //焦耳能量恢复到一定数值
-//		{
-//			fTotalCurrentLimit = fChasCurrentLimit;
-//		}
-//	}
-//	
-//	//底盘各电机电流重新分配
-//	if (chassis_totaloutput > fTotalCurrentLimit)
-//	{
-//		Chassis_Final_Output[0] = (int16_t)(Chassis_Final_Output[0] / chassis_totaloutput * fTotalCurrentLimit);
-//		Chassis_Final_Output[1] = (int16_t)(Chassis_Final_Output[1] / chassis_totaloutput * fTotalCurrentLimit);
-//		Chassis_Final_Output[2] = (int16_t)(Chassis_Final_Output[2] / chassis_totaloutput * fTotalCurrentLimit);
-//		Chassis_Final_Output[3] = (int16_t)(Chassis_Final_Output[3] / chassis_totaloutput * fTotalCurrentLimit);	
-//	}
-//}
+/**
+  * @brief  底盘功率限制
+  * @param  void
+  * @retval void
+  * @attention  在底盘输出计算后调用,主要是比例的算法,ICRA
+  */
+void Chassis_Power_Limit(void)
+{
+	float    kLimit = 1;//功率限制系数
+	float    chassis_totaloutput = 0;//统计总输出电流
+	float    Joule_Residue = 0;//剩余焦耳缓冲能量
+	int16_t  judgDataCorrect = 0;//裁判系统数据是否可用	
+	static int32_t judgDataError_Time = 0;
+	judgDataCorrect = JUDGE_sGetDataState();//裁判系统数据是否可用
+	Joule_Residue = JUDGE_fGetRemainEnergy();//剩余焦耳能量	
+	
+	//统计底盘总输出
+	chassis_totaloutput = ABS(Chassis_Final_Output[0]) + ABS(Chassis_Final_Output[1])
+							+ ABS(Chassis_Final_Output[2]) + ABS(Chassis_Final_Output[3]);
+	
+		if(judgDataCorrect == JUDGE_DATA_ERROR)//裁判系统无效时强制限速
+	{
+		judgDataError_Time++;
+		if(judgDataError_Time > 100)
+		{
+			fTotalCurrentLimit = 8000;//降为最大的1/4
+		}
+	}
+	
+	else
+	{
+		judgDataError_Time = 0;
+		//剩余焦耳量过小,开始限制输出,限制系数为平方关系
+		if(Joule_Residue < WARNING_REMAIN_POWER)
+		{
+			kLimit = (float)(Joule_Residue / WARNING_REMAIN_POWER)
+						* (float)(Joule_Residue / WARNING_REMAIN_POWER);
+			
+			fTotalCurrentLimit = kLimit * fChasCurrentLimit;
+		}
+		else   //焦耳能量恢复到一定数值
+		{
+			fTotalCurrentLimit = fChasCurrentLimit;
+		}
+    if(PowerHeatData.chassis_power>70)
+    {
+        kLimit=((PowerHeatData.chassis_power-70)/70)*((PowerHeatData.chassis_power-70)/70);
+        fTotalCurrentLimit = kLimit * fChasCurrentLimit;
+     }
+     else   //焦耳能量恢复到一定数值
+		 {
+			  fTotalCurrentLimit = fChasCurrentLimit;
+		 }
+	}	
+	//底盘各电机电流重新分配
+	if (chassis_totaloutput > fTotalCurrentLimit)
+	{
+		Chassis_Final_Output[0] = (int16_t)(Chassis_Final_Output[0] / chassis_totaloutput * fTotalCurrentLimit);
+		Chassis_Final_Output[1] = (int16_t)(Chassis_Final_Output[1] / chassis_totaloutput * fTotalCurrentLimit);
+		Chassis_Final_Output[2] = (int16_t)(Chassis_Final_Output[2] / chassis_totaloutput * fTotalCurrentLimit);
+		Chassis_Final_Output[3] = (int16_t)(Chassis_Final_Output[3] / chassis_totaloutput * fTotalCurrentLimit);	
+	}
+}
 /**************键盘模式辅助函数********************/
 
 /**

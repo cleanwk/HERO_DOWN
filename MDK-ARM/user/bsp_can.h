@@ -24,7 +24,9 @@ typedef enum
     GM6020_PITCH=0x20A,
     CAN_RM_Rx1=0X01,
     CAN_RM_Rx2=0X02,
-    CAN_RM_Rx3=0X03
+    CAN_RM_Rx3=0X03,
+    CAN_RM_judgement=0X04,
+    GIMBAL_DATA=0X10
     
 } CAN_Message_ID;
 
@@ -53,6 +55,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan);
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan);
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan);
+void CAN2_send_judgement(void);
 void CAN2_send_RM(void);
 
 //±äÁ¿ÉùÃ÷

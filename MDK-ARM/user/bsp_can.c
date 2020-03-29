@@ -1,16 +1,18 @@
 #include "bsp_can.h"
 #include "bsp_uart.h"
+#include "judgement.h"
 
 uint32_t TxMailbox1=0;
-
+uint16_t num1=0;
+uint16_t num2=0;
 moto_handle M3508[4];
 moto_handle GM6020[2];
 
 
 uint32_t can1_error=0;
-
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
+extern int yaw_angle_offset;
 
 void drv_can_init()
 {
@@ -86,6 +88,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
                     GM6020[i].torque_current        = ((rx_data[4] << 8) | rx_data[5]);
                     GM6020[i].temp                  =   rx_data[6];
                     break;
+                case GIMBAL_DATA:
+                    yaw_angle_offset                =((rx_data[0] << 8) | rx_data[1]);
+                break;
             }
 		}
 	else 
@@ -109,9 +114,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
   */
 
 
-void Chassis_set_voltage (int16_t v1, int16_t v2, int16_t v3, int16_t v4)//设置电调工作情况
+void Chassis_set_voltage(int16_t v1, int16_t v2, int16_t v3, int16_t v4)
 {
-	CAN_TxHeaderTypeDef tx_header;//报头0x200或0x1FF
+	CAN_TxHeaderTypeDef tx_header;
 	uint8_t             tx_data[8];
 	
 	tx_header.StdId = 0x200;
@@ -213,7 +218,7 @@ void CAN2_send_RM2(void)
 	tx_data[7] =    (rc_t.kb.key_code)&0xff;
     
   HAL_CAN_AddTxMessage(&hcan2, &tx_header, tx_data,(uint32_t*)CAN_TX_MAILBOX0);
-
+num2++;
 }
 
 void CAN2_send_RM3(void)
@@ -235,13 +240,68 @@ void CAN2_send_RM3(void)
   HAL_CAN_AddTxMessage(&hcan2, &tx_header, tx_data,(uint32_t*)CAN_TX_MAILBOX0);
 }
 
+void CAN2_send_judgement(void)
+{
+
+	CAN_TxHeaderTypeDef tx_header;
+     uint8_t             tx_data[8];
+    //can2_send_ffff++;
+  tx_header.StdId = CAN_RM_judgement;//!!!
+  tx_header.IDE   = CAN_ID_STD;
+  tx_header.RTR   = CAN_RTR_DATA;
+  tx_header.DLC   = 8;
+    
+   	tx_data[0] = (PowerHeatData.shooter_heat0>>8)&0xff;
+	tx_data[1] =    (PowerHeatData.shooter_heat0)&0xff;
+	tx_data[2] = (ShootNum>>8)&0xff;
+	tx_data[3] =    (ShootNum)&0xff;
+	tx_data[4] = ((uint16_t)ShootData.bullet_speed>>8)&0xff;
+	tx_data[5] =    ((uint16_t)ShootData.bullet_speed)&0xff;
+	tx_data[6] = (RobotState.shooter_heat0_cooling_limit>>8)&0xff;
+	tx_data[7] =    (RobotState.shooter_heat0_cooling_limit)&0xff;
+	
+
+  
+  HAL_CAN_AddTxMessage(&hcan2, &tx_header, tx_data,(uint32_t*)CAN_TX_MAILBOX0);
+   num1++;
+	}
+
+	void CAN1_send_RM1(void)
+{
+    uint8_t send;
+	CAN_TxHeaderTypeDef tx_header;
+     uint8_t             tx_data[8];
+    //can2_send_ffff++;
+	if(IF_RC_SW1_MID)
+		send=1;
+  tx_header.StdId = 0X00000011;//!!!
+  tx_header.IDE   = CAN_ID_STD;
+  tx_header.RTR   = CAN_RTR_DATA;
+  tx_header.DLC   = 8;
+    
+   	tx_data[0] = (send)&0xff;
+	tx_data[1] =   0&0xff;
+	tx_data[2] = 0&0xff;
+	tx_data[3] =    0&0xff;
+	tx_data[4] = 0&0xff;
+	tx_data[5] = 0&0xff;
+	tx_data[6] =0&0xff;
+	tx_data[7] =  0&0xff;
+    
+  HAL_CAN_AddTxMessage(&hcan1, &tx_header, tx_data,(uint32_t*)CAN_TX_MAILBOX0);
+
+}
+
 void CAN2_send_RM(void)
 {
     CAN2_send_RM1();
     CAN2_send_RM2();
     CAN2_send_RM3();
+	CAN1_send_RM1();
     RM_Update_Flag=0;
 }
+
+
 
 /*******************发送邮箱回调*******************/
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)

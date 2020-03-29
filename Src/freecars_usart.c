@@ -85,7 +85,7 @@ void FreeCars_Send()
 { 
 
         push(0,PowerHeatData.chassis_power);
-	      push(1,PowerHeatData.chassis_power_buffer);
+	      push(1,PowerHeatData.chassis_volt);
 				push(2,80);
 	     
 

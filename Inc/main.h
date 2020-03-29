@@ -29,14 +29,17 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
-#include "freecars_usart.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "mytype.h"
-#include "bsp_uart.h"
-#include "bsp_can.h"
-#include "pid.h"
-#include "user_tim.h"
+
+#include "can.h"
+#include "dma.h"
+#include "tim.h"
+#include "usart.h"
+#include "gpio.h"
+#include "tim.h"
+#include "system.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -58,7 +61,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+extern  uint8_t Rx[44];
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

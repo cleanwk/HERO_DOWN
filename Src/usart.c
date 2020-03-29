@@ -90,9 +90,6 @@ void MX_USART3_UART_Init(void)
   }
 }
 
-
-
-/* USART6 init function */
 void MX_USART6_UART_Init(void)
 {
 
@@ -110,7 +107,6 @@ void MX_USART6_UART_Init(void)
   }
 	
 }
-
 
 void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 {
@@ -250,9 +246,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     /* USART2 interrupt Init */
     HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(USART2_IRQn);
-}	
+}
 
- 	else if(uartHandle->Instance==USART6)
+else if(uartHandle->Instance==USART6)
   {
   /* USER CODE BEGIN USART6_MspInit 0 */
 
@@ -290,17 +286,11 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     }
 
     __HAL_LINKDMA(uartHandle,hdmarx,hdma_usart6_rx);
-		
-		
-		
-
+				
     /* USART6 interrupt Init */
     HAL_NVIC_SetPriority(USART6_IRQn, 2, 0);
     HAL_NVIC_EnableIRQ(USART6_IRQn);
-  /* USER CODE BEGIN USART6_MspInit 1 */
-
-  /* USER CODE END USART6_MspInit 1 */
-  }
+}
 	
 }
 
@@ -376,7 +366,8 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
   /* USER CODE END USART1_MspDeInit 1 */
   }
-	else if(uartHandle->Instance==USART6)
+  
+  else if(uartHandle->Instance==USART6)
   {
   /* USER CODE BEGIN USART6_MspDeInit 0 */
 

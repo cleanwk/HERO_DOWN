@@ -15,7 +15,7 @@
 uint8_t   dbus_buf[DBUS_BUFLEN];
 rc_info_t rc_t;//存储遥控器数据的结构体
 
-bool RM_Update_Flag;
+uint8_t RM_Update_Flag;
 
 
 
@@ -67,7 +67,6 @@ uint16_t dma_current_data_counter(DMA_Stream_TypeDef *dma_stream)
   /* Return the number of remaining data units for DMAy Streamx */
   return ((uint16_t)(dma_stream->NDTR));
 }
-
 
 
 /**

@@ -34,7 +34,6 @@ void Chassis_MotorOutput(void);
 void Chassis_Power_Limit(void);
 void Chassis_NORMAL_Mode_Ctrl(void);
 float Chassis_Key_MoveRamp( uint8_t status, int16_t *time, int16_t inc, int16_t dec );
-void Chassis_Keyboard_Move_Calculate( int16_t sMoveMax, int16_t sMoveRamp );
 extern float traget_speed[4];
 void CHASSIS_InitArgument(void);
 

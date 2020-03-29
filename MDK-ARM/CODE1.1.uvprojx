@@ -333,9 +333,9 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>USE_HAL_DRIVER,STM32F427xx,USE_HAL_DRIVER,STM32F427xx</Define>
+              <Define>USE_HAL_DRIVER,STM32F427xx,USE_HAL_DRIVER,STM32F427xx,ARM_MATH_CM4,__CC_ARM,ARM_MATH_MATRIX_CHECK,ARM_MATH_ROUNDING</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Inc;./user;..\RTE\_CODE1.1;.\CODE1.1;..\Src</IncludePath>
+              <IncludePath>../Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Inc;./user;..\DSP_LIB;..\DSP_LIB\Include</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -545,11 +545,6 @@
               <FilePath>.\user\bsp_can.h</FilePath>
             </File>
             <File>
-              <FileName>chassic.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\user\chassic.c</FilePath>
-            </File>
-            <File>
               <FileName>bsp_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\user\bsp_uart.c</FilePath>
@@ -558,197 +553,6 @@
               <FileName>bsp_uart.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\user\bsp_uart.h</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>chassic</GroupName>
-          <GroupOption>
-            <CommonProperty>
-              <UseCPPCompiler>0</UseCPPCompiler>
-              <RVCTCodeConst>0</RVCTCodeConst>
-              <RVCTZI>0</RVCTZI>
-              <RVCTOtherData>0</RVCTOtherData>
-              <ModuleSelection>0</ModuleSelection>
-              <IncludeInBuild>2</IncludeInBuild>
-              <AlwaysBuild>2</AlwaysBuild>
-              <GenerateAssemblyFile>2</GenerateAssemblyFile>
-              <AssembleAssemblyFile>2</AssembleAssemblyFile>
-              <PublicsOnly>2</PublicsOnly>
-              <StopOnExitCode>11</StopOnExitCode>
-              <CustomArgument></CustomArgument>
-              <IncludeLibraryModules></IncludeLibraryModules>
-              <ComprImg>1</ComprImg>
-            </CommonProperty>
-            <GroupArmAds>
-              <Cads>
-                <interw>2</interw>
-                <Optim>0</Optim>
-                <oTime>2</oTime>
-                <SplitLS>2</SplitLS>
-                <OneElfS>2</OneElfS>
-                <Strict>2</Strict>
-                <EnumInt>2</EnumInt>
-                <PlainCh>2</PlainCh>
-                <Ropi>2</Ropi>
-                <Rwpi>2</Rwpi>
-                <wLevel>0</wLevel>
-                <uThumb>2</uThumb>
-                <uSurpInc>2</uSurpInc>
-                <uC99>2</uC99>
-                <useXO>2</useXO>
-                <v6Lang>0</v6Lang>
-                <v6LangP>0</v6LangP>
-                <vShortEn>2</vShortEn>
-                <vShortWch>2</vShortWch>
-                <v6Lto>0</v6Lto>
-                <v6WtE>2</v6WtE>
-                <v6Rtti>2</v6Rtti>
-                <VariousControls>
-                  <MiscControls></MiscControls>
-                  <Define></Define>
-                  <Undefine></Undefine>
-                  <IncludePath>.\user</IncludePath>
-                </VariousControls>
-              </Cads>
-              <Aads>
-                <interw>2</interw>
-                <Ropi>2</Ropi>
-                <Rwpi>2</Rwpi>
-                <thumb>2</thumb>
-                <SplitLS>2</SplitLS>
-                <SwStkChk>2</SwStkChk>
-                <NoWarn>2</NoWarn>
-                <uSurpInc>2</uSurpInc>
-                <useXO>2</useXO>
-                <uClangAs>2</uClangAs>
-                <VariousControls>
-                  <MiscControls></MiscControls>
-                  <Define></Define>
-                  <Undefine></Undefine>
-                  <IncludePath>.\user</IncludePath>
-                </VariousControls>
-              </Aads>
-            </GroupArmAds>
-          </GroupOption>
-          <Files>
-            <File>
-              <FileName>control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\control.c</FilePath>
-            </File>
-            <File>
-              <FileName>control.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\user\control.h</FilePath>
-            </File>
-            <File>
-              <FileName>chassic.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\user\chassic.c</FilePath>
-            </File>
-            <File>
-              <FileName>chassic.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\user\chassic.h</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>gimbal</GroupName>
-          <Files>
-            <File>
-              <FileName>gimbal.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\gimbal.c</FilePath>
-            </File>
-            <File>
-              <FileName>gimbal.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\gimbal.h</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>pid</GroupName>
-          <GroupOption>
-            <CommonProperty>
-              <UseCPPCompiler>0</UseCPPCompiler>
-              <RVCTCodeConst>0</RVCTCodeConst>
-              <RVCTZI>0</RVCTZI>
-              <RVCTOtherData>0</RVCTOtherData>
-              <ModuleSelection>0</ModuleSelection>
-              <IncludeInBuild>2</IncludeInBuild>
-              <AlwaysBuild>2</AlwaysBuild>
-              <GenerateAssemblyFile>2</GenerateAssemblyFile>
-              <AssembleAssemblyFile>2</AssembleAssemblyFile>
-              <PublicsOnly>2</PublicsOnly>
-              <StopOnExitCode>11</StopOnExitCode>
-              <CustomArgument></CustomArgument>
-              <IncludeLibraryModules></IncludeLibraryModules>
-              <ComprImg>1</ComprImg>
-            </CommonProperty>
-            <GroupArmAds>
-              <Cads>
-                <interw>2</interw>
-                <Optim>0</Optim>
-                <oTime>2</oTime>
-                <SplitLS>2</SplitLS>
-                <OneElfS>2</OneElfS>
-                <Strict>2</Strict>
-                <EnumInt>2</EnumInt>
-                <PlainCh>2</PlainCh>
-                <Ropi>2</Ropi>
-                <Rwpi>2</Rwpi>
-                <wLevel>0</wLevel>
-                <uThumb>2</uThumb>
-                <uSurpInc>2</uSurpInc>
-                <uC99>2</uC99>
-                <useXO>2</useXO>
-                <v6Lang>0</v6Lang>
-                <v6LangP>0</v6LangP>
-                <vShortEn>2</vShortEn>
-                <vShortWch>2</vShortWch>
-                <v6Lto>0</v6Lto>
-                <v6WtE>2</v6WtE>
-                <v6Rtti>2</v6Rtti>
-                <VariousControls>
-                  <MiscControls></MiscControls>
-                  <Define></Define>
-                  <Undefine></Undefine>
-                  <IncludePath>..\user</IncludePath>
-                </VariousControls>
-              </Cads>
-              <Aads>
-                <interw>2</interw>
-                <Ropi>2</Ropi>
-                <Rwpi>2</Rwpi>
-                <thumb>2</thumb>
-                <SplitLS>2</SplitLS>
-                <SwStkChk>2</SwStkChk>
-                <NoWarn>2</NoWarn>
-                <uSurpInc>2</uSurpInc>
-                <useXO>2</useXO>
-                <uClangAs>2</uClangAs>
-                <VariousControls>
-                  <MiscControls></MiscControls>
-                  <Define></Define>
-                  <Undefine></Undefine>
-                  <IncludePath></IncludePath>
-                </VariousControls>
-              </Aads>
-            </GroupArmAds>
-          </GroupOption>
-          <Files>
-            <File>
-              <FileName>pid.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\user\pid.c</FilePath>
-            </File>
-            <File>
-              <FileName>pid.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\user\pid.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -783,32 +587,87 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>JY901</GroupName>
+          <GroupName>system</GroupName>
           <Files>
             <File>
-              <FileName>JY901.c</FileName>
+              <FileName>system.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\JY901.c</FilePath>
+              <FilePath>.\user\system.c</FilePath>
             </File>
             <File>
-              <FileName>JY901.h</FileName>
+              <FileName>system.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\JY901.h</FilePath>
+              <FilePath>.\user\system.h</FilePath>
             </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>kalman</GroupName>
+          <GroupName>JY901</GroupName>
           <Files>
             <File>
-              <FileName>kalman.c</FileName>
+              <FileName>JY901.C</FileName>
               <FileType>1</FileType>
-              <FilePath>.\kalman.c</FilePath>
+              <FilePath>.\user\JY901.C</FilePath>
             </File>
             <File>
-              <FileName>kalman.h</FileName>
+              <FileName>JY901.H</FileName>
               <FileType>5</FileType>
-              <FilePath>.\kalman.h</FilePath>
+              <FilePath>.\user\JY901.H</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Calculate</GroupName>
+          <Files>
+            <File>
+              <FileName>Calculate.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\Calculate.c</FilePath>
+            </File>
+            <File>
+              <FileName>Calculate.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\Calculate.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>DSP_LIB</GroupName>
+          <Files>
+            <File>
+              <FileName>arm_cortexM4lf_math.lib</FileName>
+              <FileType>4</FileType>
+              <FilePath>..\DSP_LIB\arm_cortexM4lf_math.lib</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Chassic</GroupName>
+          <Files>
+            <File>
+              <FileName>chassic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\chassic.c</FilePath>
+            </File>
+            <File>
+              <FileName>chassic.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\chassic.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>gimbal</GroupName>
+          <Files>
+            <File>
+              <FileName>gimbal.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\gimbal.c</FilePath>
+            </File>
+            <File>
+              <FileName>gimbal.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\gimbal.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -37,7 +37,7 @@ void CHAS_Key_Ctrl(void);
 void Chassis_Omni_Move_Calculate(void);
 void Chassis_Motor_Speed_PID( eChassisWheel eWheel );
 void Chassis_MotorOutput(void);
-//void Chassis_Power_Limit(void);
+void Chassis_Power_Limit(void);
 void Chassis_NORMAL_Mode_Ctrl(void);
 void Chassis_Keyboard_Move_Calculate(int16_t sMoveMax, int16_t sMoveRamp);
 void CHASSIS_CORGI_Mode_Ctrl(int16_t sRevolMax, int16_t sRevolRamp);
@@ -48,4 +48,6 @@ extern float traget_speed[4];
 void CHASSIS_InitArgument(void);
 int16_t GIMBAL_GetOffsetAngle(void);
 float Chassis_SpeedZ_PID(int16_t ErrorReal, float kp);
+void CHASSIS_SZUPUP_Mode_Ctrl(void);
 #endif
+

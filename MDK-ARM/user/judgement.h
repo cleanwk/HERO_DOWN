@@ -23,6 +23,7 @@
 //起始字节,协议固定为0xA5
 #define    JUDGE_FRAME_HEADER         (0xA5)
 extern  bool Judge_Data_TF;
+extern uint16_t ShootNum;
 typedef enum 
 {
 	FRAME_HEADER         = 0,
@@ -174,6 +175,7 @@ typedef __packed struct
 	uint8_t mains_power_chassis_output : 1;  
 	uint8_t mains_power_shooter_output : 1; 
 } ext_game_robot_state_t; 
+extern ext_game_robot_state_t              RobotState;
 
 
 /* ID: 0X0202  Byte: 14    实时功率热量数据 */
@@ -228,7 +230,7 @@ typedef __packed struct
 	uint8_t bullet_freq;   
 	float bullet_speed;  
 } ext_shoot_data_t; 
-
+extern ext_shoot_data_t					ShootData;
 
 /* 
 	
@@ -284,6 +286,15 @@ typedef __packed struct
 	14 			4 		自定义浮点数据 3 	 
 	18 			1 		自定义 8 位数据 4 	 
 
+2.	客户端 客户端自定义UI：cmd_id:0x100。			发送频率推荐：10Hz
+	字节偏移量 				大小 						说明 											备注 
+			0 							2 					数据的内容 ID 								0xD180 
+			2 							2 					发送端 ID 						需要校验发送者机器人的 ID 正确性 
+			4 							2 					客户端的 ID 					只能为发送者机器人对应的客户端 
+			6 							4 					自定义浮点数据 1 	 
+			10 							4 					自定义浮点数据 2 	 
+			14 							4 					自定义浮点数据 3 	 
+			18 							1 					自定义 8 位数据 4 	
 */
 typedef __packed struct 
 { 
@@ -292,7 +303,15 @@ typedef __packed struct
 	float data3; 
 	uint8_t masks; 
 } client_custom_data_t;
-
+//往客户端操作手界面上添加基准线，具体格式见《自定义 UI 操作文档》
+typedef __packed struct 
+{ 
+	float Graphic_type; 
+	float Start_x; 
+	float Start_y; 
+	float end_x; 
+	float end_y; 
+} client_UIcustom_reference_line;
 
 /* 
 	学生机器人间通信 cmd_id 0x0301，内容 ID:0x0200~0x02FF
@@ -365,6 +384,10 @@ uint16_t JUDGE_usGetHeatLimit(void);
 uint16_t JUDGE_usGetShootCold(void);
 bool JUDGE_IfArmorHurt(void);
 bool Judge_If_Death(void);
+//上传自定义图形至客户端
+void JUDGE_Show_Graphic(void);
+//发送数据给队友(步兵向哨兵发送)
+void Send_to_Teammate(void);
 #endif //版本号
 /*-------------------------------------------------------------*/
 #endif //头文件

@@ -4,9 +4,9 @@
 #include "stm32f4xx_hal.h"
 
 enum{
-    LLAST	= 0,
+
     LAST 	= 1,
-    NOW 	= 2,
+    NOW 	= 0,
     
     POSITION_PID,
     DELTA_PID,

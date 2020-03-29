@@ -22,6 +22,7 @@
 #define    RC_SW_UP              ((uint16_t)1)
 #define    RC_SW_MID             ((uint16_t)3)
 #define    RC_SW_DOWN            ((uint16_t)2)
+
 /** 
   * @brief  remote control information
   */
@@ -124,8 +125,7 @@ typedef struct
 
 void uart_receive_handler(UART_HandleTypeDef *huart);
 void dbus_uart_init(void);
-void USART_SendData(USART_TypeDef* USARTx, uint16_t Data);
 extern rc_info_t rc_t;
-extern bool RM_Update_Flag;
+extern uint8_t RM_Update_Flag;
 #endif
 
